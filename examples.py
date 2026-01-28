@@ -103,7 +103,7 @@ def example2x2():
   print(f"\nConstraint Check: P1 HIGH ≥ 50% → {result['p'][0]:.1%} ✓")
 
 if __name__ == "__main__":
-  # ret = rps_example()
+  ret = rps_example()
   # airline()
-  example2x2()
+  # example2x2()
   print('Done :]')

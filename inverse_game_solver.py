@@ -35,7 +35,7 @@ class InverseGameSolver:
                  payoff_matrix_2: np.ndarray,
                  p1_constraints: Dict[int, Tuple[float, float]] = None,
                  p2_constraints: Dict[int, Tuple[float, float]] = None,
-                 tolerance: float = 1e-6,
+                 tolerance: float = 1e-3,
                  verbose: bool = True):
         """
         Initialize the InverseGameSolver.
@@ -135,7 +135,7 @@ class InverseGameSolver:
             constraints=constraints,
             options={
                 'maxiter': max_iterations,
-                'ftol': 1e-10,
+                'ftol': self.tolerance,
                 'disp': False
             }
         )

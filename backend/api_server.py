@@ -3,7 +3,7 @@ FastAPI server to expose InverseGameSolver as a REST API.
 This allows the Next.js frontend to call the solver.
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import numpy as np
@@ -19,7 +19,16 @@ app.add_middleware(
     allow_credentials=False,  # Must be False when using "*"
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# Add explicit OPTIONS handler for CORS preflight
+@app.options("/solve")
+async def options_solve(response: Response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return {"status": "ok"}
 
 
 class Constraint(BaseModel):
@@ -60,7 +69,7 @@ def root():
 
 
 @app.post("/solve", response_model=SolveResponse)
-def solve_game(request: SolveRequest):
+def solve_game(request: SolveRequest, response: Response):
     """
     Solve the inverse game problem.
 
@@ -73,6 +82,11 @@ def solve_game(request: SolveRequest):
     - Original and modified equilibria
     - Distance metrics
     """
+    # Set explicit CORS headers
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+
     print(f"\n{'='*70}")
     print(f"📥 Received solve request")
     print(f"Matrix 1 shape: {len(request.payoff_matrix_1)}x{len(request.payoff_matrix_1[0]) if request.payoff_matrix_1 else 0}")

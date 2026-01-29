@@ -145,11 +145,11 @@ export function GameTheorySolver() {
   // Call the solver API whenever debounced inputs change
   useEffect(() => {
     const controller = new AbortController()
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
     const solveProblem = async () => {
       setIsLoading(true)
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
         const response = await fetch(`${apiUrl}/solve`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

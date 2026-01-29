@@ -130,8 +130,10 @@ export function GameTheorySolver() {
   const [cols, setCols] = useState(2)
   const [matrix, setMatrix] = useState(GAME_PRESETS[0].matrix1)
   const [matrix2, setMatrix2] = useState(GAME_PRESETS[0].matrix2)
-  const [player1Prob, setPlayer1Prob] = useState(40)
-  const [player2Prob, setPlayer2Prob] = useState(50)
+  const [player1MinProb, setPlayer1MinProb] = useState(40)
+  const [player1MaxProb, setPlayer1MaxProb] = useState(60)
+  const [player2MinProb, setPlayer2MinProb] = useState(40)
+  const [player2MaxProb, setPlayer2MaxProb] = useState(60)
   const [selectedPreset, setSelectedPreset] = useState(GAME_PRESETS[0].id)
   const [solverResult, setSolverResult] = useState<SolverResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -141,15 +143,19 @@ export function GameTheorySolver() {
   const presetDataRef = useRef<{
     matrix1: number[][]
     matrix2: number[][]
-    player1Prob: number
-    player2Prob: number
+    player1MinProb: number
+    player1MaxProb: number
+    player2MinProb: number
+    player2MaxProb: number
   } | null>(null)
 
   // Debounce inputs by 500ms
   const debouncedMatrix = useDebounce(matrix, 500)
   const debouncedMatrix2 = useDebounce(matrix2, 500)
-  const debouncedPlayer1Prob = useDebounce(player1Prob, 500)
-  const debouncedPlayer2Prob = useDebounce(player2Prob, 500)
+  const debouncedPlayer1MinProb = useDebounce(player1MinProb, 500)
+  const debouncedPlayer1MaxProb = useDebounce(player1MaxProb, 500)
+  const debouncedPlayer2MinProb = useDebounce(player2MinProb, 500)
+  const debouncedPlayer2MaxProb = useDebounce(player2MaxProb, 500)
 
   // Immediate API call for preset changes (bypass debounce)
   useEffect(() => {
@@ -159,12 +165,13 @@ export function GameTheorySolver() {
 
       const solveProblem = async () => {
         // Use data from ref to avoid state closure issues
-        const { matrix1, matrix2, player1Prob, player2Prob } = presetDataRef.current!
+        const { matrix1, matrix2, player1MinProb, player1MaxProb, player2MinProb, player2MaxProb } = presetDataRef.current!
 
         console.log("🚀 Immediate API call triggered with preset data")
         console.log("Matrix 1:", matrix1)
         console.log("Matrix 2:", matrix2)
-        console.log("Constraints:", player1Prob, player2Prob)
+        console.log("P1 Constraints:", player1MinProb, "-", player1MaxProb)
+        console.log("P2 Constraints:", player2MinProb, "-", player2MaxProb)
 
         try {
           const response = await fetch(`${apiUrl}/solve`, {
@@ -175,13 +182,13 @@ export function GameTheorySolver() {
               payoff_matrix_2: matrix2,
               p1_constraints: [{
                 action_index: 0,
-                min_prob: player1Prob / 100,
-                max_prob: player1Prob / 100,
+                min_prob: player1MinProb / 100,
+                max_prob: player1MaxProb / 100,
               }],
               p2_constraints: [{
                 action_index: 0,
-                min_prob: player2Prob / 100,
-                max_prob: player2Prob / 100,
+                min_prob: player2MinProb / 100,
+                max_prob: player2MaxProb / 100,
               }],
               max_iterations: 500,
             }),
@@ -237,15 +244,15 @@ export function GameTheorySolver() {
             p1_constraints: [
               {
                 action_index: 0,
-                min_prob: debouncedPlayer1Prob / 100,
-                max_prob: debouncedPlayer1Prob / 100,
+                min_prob: debouncedPlayer1MinProb / 100,
+                max_prob: debouncedPlayer1MaxProb / 100,
               },
             ],
             p2_constraints: [
               {
                 action_index: 0,
-                min_prob: debouncedPlayer2Prob / 100,
-                max_prob: debouncedPlayer2Prob / 100,
+                min_prob: debouncedPlayer2MinProb / 100,
+                max_prob: debouncedPlayer2MaxProb / 100,
               },
             ],
             max_iterations: 500,
@@ -290,7 +297,7 @@ export function GameTheorySolver() {
 
       return () => controller.abort()
     }
-  }, [debouncedMatrix, debouncedMatrix2, debouncedPlayer1Prob, debouncedPlayer2Prob, forceImmediate])
+  }, [debouncedMatrix, debouncedMatrix2, debouncedPlayer1MinProb, debouncedPlayer1MaxProb, debouncedPlayer2MinProb, debouncedPlayer2MaxProb, forceImmediate])
 
   // Load first preset on mount
   useEffect(() => {
@@ -344,8 +351,10 @@ export function GameTheorySolver() {
       presetDataRef.current = {
         matrix1: newMatrix1,
         matrix2: newMatrix2,
-        player1Prob: 50, // Reset to default
-        player2Prob: 50, // Reset to default
+        player1MinProb: 40, // Reset to default
+        player1MaxProb: 60, // Reset to default
+        player2MinProb: 40, // Reset to default
+        player2MaxProb: 60, // Reset to default
       }
 
       // Update all state
@@ -354,8 +363,10 @@ export function GameTheorySolver() {
       setRows(preset.rows)
       setCols(preset.cols)
       setSelectedPreset(presetId)
-      setPlayer1Prob(50) // Reset slider to default
-      setPlayer2Prob(50) // Reset slider to default
+      setPlayer1MinProb(40) // Reset slider to default
+      setPlayer1MaxProb(60) // Reset slider to default
+      setPlayer2MinProb(40) // Reset slider to default
+      setPlayer2MaxProb(60) // Reset slider to default
       setForceImmediate(true) // Trigger immediate API call
     }
   }
@@ -444,9 +455,6 @@ export function GameTheorySolver() {
           </div>
 
           <div className="mb-6 md:mb-8 flex flex-col items-center w-full">
-            <p className="text-gray-300 text-sm md:text-base mb-3 md:mb-4 w-full text-center lg:text-left">
-              Player 1 Payoff Matrix
-            </p>
             <div className="flex justify-center w-full overflow-x-auto">
               <PayoffMatrix
                 matrix={matrix}
@@ -460,19 +468,24 @@ export function GameTheorySolver() {
           </div>
 
           <div className="w-full flex justify-center mb-6 md:mb-8">
-            <div className="w-full max-w-xs sm:max-w-sm">
-              <ProbabilitySlider
-                value={player1Prob}
-                onChange={setPlayer1Prob}
-                label="Player 1 Probability Constraint (0-100%)"
-              />
+            <div className="w-full max-w-md space-y-4">
+              <div>
+                <p className="text-gray-300 text-xs sm:text-sm mb-2 font-semibold">Player 1 Constraints</p>
+                <ProbabilitySlider
+                  value={player1MinProb}
+                  onChange={setPlayer1MinProb}
+                  label="MIN Probability (0-100%)"
+                />
+                <ProbabilitySlider
+                  value={player1MaxProb}
+                  onChange={setPlayer1MaxProb}
+                  label="MAX Probability (0-100%)"
+                />
+              </div>
             </div>
           </div>
 
           <div className="mb-6 md:mb-8 flex flex-col items-center w-full">
-            <p className="text-gray-300 text-sm md:text-base mb-3 md:mb-4 w-full text-center lg:text-left">
-              Player 2 Payoff Matrix
-            </p>
             <div className="flex justify-center w-full overflow-x-auto">
               <PayoffMatrix
                 matrix={matrix2}
@@ -486,12 +499,20 @@ export function GameTheorySolver() {
           </div>
 
           <div className="w-full flex justify-center">
-            <div className="w-full max-w-xs sm:max-w-sm">
-              <ProbabilitySlider
-                value={player2Prob}
-                onChange={setPlayer2Prob}
-                label="Player 2 Probability Constraint (0-100%)"
-              />
+            <div className="w-full max-w-md space-y-4">
+              <div>
+                <p className="text-gray-300 text-xs sm:text-sm mb-2 font-semibold">Player 2 Constraints</p>
+                <ProbabilitySlider
+                  value={player2MinProb}
+                  onChange={setPlayer2MinProb}
+                  label="MIN Probability (0-100%)"
+                />
+                <ProbabilitySlider
+                  value={player2MaxProb}
+                  onChange={setPlayer2MaxProb}
+                  label="MAX Probability (0-100%)"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -565,7 +586,7 @@ export function GameTheorySolver() {
             <EquilibriumGraph
               rows={rows}
               cols={cols}
-              player1Prob={player1Prob}
+              player1Prob={player1MinProb}
               matrix={matrix}
               matrix2={matrix2}
               solverResult={solverResult}

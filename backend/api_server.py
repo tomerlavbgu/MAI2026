@@ -3,8 +3,9 @@ FastAPI server to expose InverseGameSolver as a REST API.
 This allows the Next.js frontend to call the solver.
 """
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
 import numpy as np
 from inverse_game_solver import InverseGameSolver
@@ -12,23 +13,27 @@ from typing import Dict, List, Tuple, Optional
 
 app = FastAPI(title="Game Theory Solver API")
 
-# Enable CORS for Next.js frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=False,  # Must be False when using "*"
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
+# Custom CORS middleware to ensure headers are always set
+class CustomCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Handle preflight requests
+        if request.method == "OPTIONS":
+            response = Response()
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            response.headers["Access-Control-Max-Age"] = "600"
+            return response
 
-# Add explicit OPTIONS handler for CORS preflight
-@app.options("/solve")
-async def options_solve(response: Response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    return {"status": "ok"}
+        # Handle actual requests
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+
+# Add custom CORS middleware
+app.add_middleware(CustomCORSMiddleware)
 
 
 class Constraint(BaseModel):
@@ -69,7 +74,7 @@ def root():
 
 
 @app.post("/solve", response_model=SolveResponse)
-def solve_game(request: SolveRequest, response: Response):
+def solve_game(request: SolveRequest):
     """
     Solve the inverse game problem.
 
@@ -82,11 +87,6 @@ def solve_game(request: SolveRequest, response: Response):
     - Original and modified equilibria
     - Distance metrics
     """
-    # Set explicit CORS headers
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-
     print(f"\n{'='*70}")
     print(f"📥 Received solve request")
     print(f"Matrix 1 shape: {len(request.payoff_matrix_1)}x{len(request.payoff_matrix_1[0]) if request.payoff_matrix_1 else 0}")

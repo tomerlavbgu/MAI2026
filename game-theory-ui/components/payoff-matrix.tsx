@@ -32,6 +32,14 @@ export function PayoffMatrix({ matrix, onValueChange, rows: numRows, cols: numCo
         <thead>
           <tr>
             <th className="w-6 sm:w-10"></th>
+            <th className="w-6 sm:w-10"></th>
+            <th colSpan={numCols} className="text-gray-300 text-sm sm:text-base font-normal pb-2 text-center">
+              Player 2
+            </th>
+          </tr>
+          <tr>
+            <th className="w-6 sm:w-10"></th>
+            <th className="w-6 sm:w-10"></th>
             {cols.map((col) => (
               <th
                 key={col}
@@ -45,6 +53,15 @@ export function PayoffMatrix({ matrix, onValueChange, rows: numRows, cols: numCo
         <tbody>
           {rows.map((row) => (
             <tr key={row}>
+              {row === 0 && (
+                <td
+                  rowSpan={numRows}
+                  className="text-gray-300 text-sm sm:text-base font-normal pr-1 sm:pr-2 align-middle"
+                  style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+                >
+                  Player 1
+                </td>
+              )}
               <td className="text-gray-300 text-sm sm:text-base font-normal pr-1 sm:pr-3 text-center">
                 {rowLabels[row]}
               </td>

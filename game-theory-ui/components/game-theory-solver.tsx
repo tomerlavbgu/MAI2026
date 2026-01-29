@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { PayoffMatrix } from "./payoff-matrix"
-import { RangeSlider } from "./range-slider"
+import { ProbabilitySlider } from "./probability-slider"
 import { PerturbedMatrix } from "./perturbed-matrix"
 import { EquilibriumGraph } from "./equilibrium-graph"
 import { Spinner } from "@/components/ui/spinner"
@@ -130,112 +130,26 @@ export function GameTheorySolver() {
   const [cols, setCols] = useState(2)
   const [matrix, setMatrix] = useState(GAME_PRESETS[0].matrix1)
   const [matrix2, setMatrix2] = useState(GAME_PRESETS[0].matrix2)
-  const [player1MinProb, setPlayer1MinProb] = useState(40)
-  const [player1MaxProb, setPlayer1MaxProb] = useState(60)
-  const [player2MinProb, setPlayer2MinProb] = useState(40)
-  const [player2MaxProb, setPlayer2MaxProb] = useState(60)
+  const [player1Prob, setPlayer1Prob] = useState(40)
+  const [player2Prob, setPlayer2Prob] = useState(50)
   const [selectedPreset, setSelectedPreset] = useState(GAME_PRESETS[0].id)
   const [solverResult, setSolverResult] = useState<SolverResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [forceImmediate, setForceImmediate] = useState(false)
-
-  // Ref to store preset data for immediate API call (avoids state closure issues)
-  const presetDataRef = useRef<{
-    matrix1: number[][]
-    matrix2: number[][]
-    player1MinProb: number
-    player1MaxProb: number
-    player2MinProb: number
-    player2MaxProb: number
-  } | null>(null)
 
   // Debounce inputs by 500ms
   const debouncedMatrix = useDebounce(matrix, 500)
   const debouncedMatrix2 = useDebounce(matrix2, 500)
-  const debouncedPlayer1MinProb = useDebounce(player1MinProb, 500)
-  const debouncedPlayer1MaxProb = useDebounce(player1MaxProb, 500)
-  const debouncedPlayer2MinProb = useDebounce(player2MinProb, 500)
-  const debouncedPlayer2MaxProb = useDebounce(player2MaxProb, 500)
-
-  // Immediate API call for preset changes (bypass debounce)
-  useEffect(() => {
-    if (forceImmediate && presetDataRef.current) {
-      const controller = new AbortController()
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-
-      const solveProblem = async () => {
-        // Use data from ref to avoid state closure issues
-        const { matrix1, matrix2, player1MinProb, player1MaxProb, player2MinProb, player2MaxProb } = presetDataRef.current!
-
-        console.log("🚀 Immediate API call triggered with preset data")
-        console.log("Matrix 1:", matrix1)
-        console.log("Matrix 2:", matrix2)
-        console.log("P1 Constraints:", player1MinProb, "-", player1MaxProb)
-        console.log("P2 Constraints:", player2MinProb, "-", player2MaxProb)
-
-        try {
-          const response = await fetch(`${apiUrl}/solve`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              payoff_matrix_1: matrix1,  // Use ref data, not state!
-              payoff_matrix_2: matrix2,
-              p1_constraints: [{
-                action_index: 0,
-                min_prob: player1MinProb / 100,
-                max_prob: player1MaxProb / 100,
-              }],
-              p2_constraints: [{
-                action_index: 0,
-                min_prob: player2MinProb / 100,
-                max_prob: player2MaxProb / 100,
-              }],
-              max_iterations: 500,
-            }),
-            signal: controller.signal,
-          })
-
-          if (response.ok) {
-            const data: SolverResult = await response.json()
-            setSolverResult(data)
-            console.log("✅ Immediate solver API call success (preset change)!")
-            console.log("Modified NE:", data.modified_equilibrium)
-          } else {
-            let errorDetails = `Status: ${response.status} ${response.statusText}`
-            try {
-              const errorBody = await response.text()
-              errorDetails += `\nResponse: ${errorBody.substring(0, 500)}`
-            } catch (e) {
-              // Ignore if can't read response
-            }
-            console.error("❌ Immediate solver API error:", errorDetails)
-          }
-        } catch (error) {
-          if (error instanceof Error && error.name !== 'AbortError') {
-            console.error("❌ Immediate network error:", error.message)
-          }
-        } finally {
-          setIsLoading(false)
-          setForceImmediate(false)  // Reset flag
-          presetDataRef.current = null  // Clear ref
-        }
-      }
-
-      solveProblem()
-      return () => controller.abort()
-    }
-  }, [forceImmediate])
+  const debouncedPlayer1Prob = useDebounce(player1Prob, 500)
+  const debouncedPlayer2Prob = useDebounce(player2Prob, 500)
 
   // Call the solver API whenever debounced inputs change
   useEffect(() => {
-    if (!forceImmediate) {  // Only run if not forcing immediate
     const controller = new AbortController()
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
     const solveProblem = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch(`${apiUrl}/solve`, {
+        const response = await fetch("http://localhost:8000/solve", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -244,15 +158,15 @@ export function GameTheorySolver() {
             p1_constraints: [
               {
                 action_index: 0,
-                min_prob: debouncedPlayer1MinProb / 100,
-                max_prob: debouncedPlayer1MaxProb / 100,
+                min_prob: debouncedPlayer1Prob / 100,
+                max_prob: debouncedPlayer1Prob / 100,
               },
             ],
             p2_constraints: [
               {
                 action_index: 0,
-                min_prob: debouncedPlayer2MinProb / 100,
-                max_prob: debouncedPlayer2MaxProb / 100,
+                min_prob: debouncedPlayer2Prob / 100,
+                max_prob: debouncedPlayer2Prob / 100,
               },
             ],
             max_iterations: 500,
@@ -263,47 +177,22 @@ export function GameTheorySolver() {
         if (response.ok) {
           const data: SolverResult = await response.json()
           setSolverResult(data)
-          console.log("✅ Solver API success!")
         } else {
-          // Get detailed error message
-          let errorDetails = `Status: ${response.status} ${response.statusText}`
-          try {
-            const errorBody = await response.text()
-            errorDetails += `\nResponse: ${errorBody.substring(0, 500)}`
-          } catch (e) {
-            // Ignore if can't read response
-          }
-          console.error("❌ Solver API error:", errorDetails)
-          console.error("📍 API URL:", apiUrl)
-          console.error("📦 Request sent:", {
-            payoff_matrix_1: debouncedMatrix,
-            payoff_matrix_2: debouncedMatrix2,
-            p1_constraints: [{action_index: 0, min_prob: debouncedPlayer1Prob / 100, max_prob: debouncedPlayer1Prob / 100}],
-            p2_constraints: [{action_index: 0, min_prob: debouncedPlayer2Prob / 100, max_prob: debouncedPlayer2Prob / 100}],
-          })
+          console.error("Solver API error:", response.status, response.statusText)
         }
       } catch (error) {
         if (error instanceof Error && error.name !== 'AbortError') {
-          console.error("❌ Network error calling solver API:", error.message)
-          console.error("📍 Attempted URL:", apiUrl || "http://localhost:8000")
-          console.error("🌐 NEXT_PUBLIC_API_URL env var:", process.env.NEXT_PUBLIC_API_URL || "❌ NOT SET!")
+          console.error("Error calling solver API:", error)
         }
       } finally {
         setIsLoading(false)
       }
     }
 
-      solveProblem()
+    solveProblem()
 
-      return () => controller.abort()
-    }
-  }, [debouncedMatrix, debouncedMatrix2, debouncedPlayer1MinProb, debouncedPlayer1MaxProb, debouncedPlayer2MinProb, debouncedPlayer2MaxProb, forceImmediate])
-
-  // Load first preset on mount
-  useEffect(() => {
-    console.log("🎬 Initial load - loading first preset")
-    loadPreset(GAME_PRESETS[0].id)
-  }, []) // Empty dependency array - runs once on mount
+    return () => controller.abort()
+  }, [debouncedMatrix, debouncedMatrix2, debouncedPlayer1Prob, debouncedPlayer2Prob])
 
   // Compute perturbed matrices from solver results
   const perturbedMatrix1 = solverResult
@@ -339,35 +228,12 @@ export function GameTheorySolver() {
   const loadPreset = (presetId: string) => {
     const preset = GAME_PRESETS.find((p) => p.id === presetId)
     if (preset) {
-      // Clear solver result to force graph to use new matrices
-      setSolverResult(null)
-      setIsLoading(true) // Show loading immediately
-
-      // Deep copy matrices
-      const newMatrix1 = preset.matrix1.map(row => [...row])
-      const newMatrix2 = preset.matrix2.map(row => [...row])
-
-      // Store preset data in ref for immediate API call (avoids state closure issues)
-      presetDataRef.current = {
-        matrix1: newMatrix1,
-        matrix2: newMatrix2,
-        player1MinProb: 40, // Reset to default
-        player1MaxProb: 60, // Reset to default
-        player2MinProb: 40, // Reset to default
-        player2MaxProb: 60, // Reset to default
-      }
-
-      // Update all state
-      setMatrix(newMatrix1)
-      setMatrix2(newMatrix2)
+      // Deep copy to ensure proper state update
+      setMatrix(preset.matrix1.map(row => [...row]))
+      setMatrix2(preset.matrix2.map(row => [...row]))
       setRows(preset.rows)
       setCols(preset.cols)
       setSelectedPreset(presetId)
-      setPlayer1MinProb(40) // Reset slider to default
-      setPlayer1MaxProb(60) // Reset slider to default
-      setPlayer2MinProb(40) // Reset slider to default
-      setPlayer2MaxProb(60) // Reset slider to default
-      setForceImmediate(true) // Trigger immediate API call
     }
   }
 
@@ -471,13 +337,11 @@ export function GameTheorySolver() {
           </div>
 
           <div className="w-full flex justify-center mb-6 md:mb-8">
-            <div className="w-full max-w-md">
-              <RangeSlider
-                minValue={player1MinProb}
-                maxValue={player1MaxProb}
-                onMinChange={setPlayer1MinProb}
-                onMaxChange={setPlayer1MaxProb}
-                label="Player 1 Constraint Range (0-100%)"
+            <div className="w-full max-w-xs sm:max-w-sm">
+              <ProbabilitySlider
+                value={player1Prob}
+                onChange={setPlayer1Prob}
+                label="Player 1 Probability Constraint (0-100%)"
               />
             </div>
           </div>
@@ -499,13 +363,11 @@ export function GameTheorySolver() {
           </div>
 
           <div className="w-full flex justify-center">
-            <div className="w-full max-w-md">
-              <RangeSlider
-                minValue={player2MinProb}
-                maxValue={player2MaxProb}
-                onMinChange={setPlayer2MinProb}
-                onMaxChange={setPlayer2MaxProb}
-                label="Player 2 Constraint Range (0-100%)"
+            <div className="w-full max-w-xs sm:max-w-sm">
+              <ProbabilitySlider
+                value={player2Prob}
+                onChange={setPlayer2Prob}
+                label="Player 2 Probability Constraint (0-100%)"
               />
             </div>
           </div>
@@ -580,7 +442,7 @@ export function GameTheorySolver() {
             <EquilibriumGraph
               rows={rows}
               cols={cols}
-              player1Prob={player1MinProb}
+              player1Prob={player1Prob}
               matrix={matrix}
               matrix2={matrix2}
               solverResult={solverResult}

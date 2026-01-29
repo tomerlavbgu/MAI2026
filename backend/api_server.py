@@ -73,6 +73,14 @@ def solve_game(request: SolveRequest):
     - Original and modified equilibria
     - Distance metrics
     """
+    print(f"\n{'='*70}")
+    print(f"📥 Received solve request")
+    print(f"Matrix 1 shape: {len(request.payoff_matrix_1)}x{len(request.payoff_matrix_1[0]) if request.payoff_matrix_1 else 0}")
+    print(f"Matrix 2 shape: {len(request.payoff_matrix_2)}x{len(request.payoff_matrix_2[0]) if request.payoff_matrix_2 else 0}")
+    print(f"P1 constraints: {request.p1_constraints}")
+    print(f"P2 constraints: {request.p2_constraints}")
+    print(f"{'='*70}\n")
+
     try:
         # Convert to numpy arrays
         payoff_1 = np.array(request.payoff_matrix_1, dtype=float)
@@ -130,10 +138,17 @@ def solve_game(request: SolveRequest):
             }
         )
 
+        print(f"✅ Solve completed successfully!")
+        print(f"Success: {response.success}, Constraint satisfied: {response.constraint_satisfied}\n")
         return response
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"❌ ERROR in solve_game:")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
 
 
 if __name__ == "__main__":

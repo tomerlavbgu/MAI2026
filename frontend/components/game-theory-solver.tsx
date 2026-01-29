@@ -178,12 +178,30 @@ export function GameTheorySolver() {
         if (response.ok) {
           const data: SolverResult = await response.json()
           setSolverResult(data)
+          console.log("✅ Solver API success!")
         } else {
-          console.error("Solver API error:", response.status, response.statusText)
+          // Get detailed error message
+          let errorDetails = `Status: ${response.status} ${response.statusText}`
+          try {
+            const errorBody = await response.text()
+            errorDetails += `\nResponse: ${errorBody.substring(0, 500)}`
+          } catch (e) {
+            // Ignore if can't read response
+          }
+          console.error("❌ Solver API error:", errorDetails)
+          console.error("📍 API URL:", apiUrl)
+          console.error("📦 Request sent:", {
+            payoff_matrix_1: debouncedMatrix,
+            payoff_matrix_2: debouncedMatrix2,
+            p1_constraints: [{action_index: 0, min_prob: debouncedPlayer1Prob / 100, max_prob: debouncedPlayer1Prob / 100}],
+            p2_constraints: [{action_index: 0, min_prob: debouncedPlayer2Prob / 100, max_prob: debouncedPlayer2Prob / 100}],
+          })
         }
       } catch (error) {
         if (error instanceof Error && error.name !== 'AbortError') {
-          console.error("Error calling solver API:", error)
+          console.error("❌ Network error calling solver API:", error.message)
+          console.error("📍 Attempted URL:", apiUrl || "http://localhost:8000")
+          console.error("🌐 NEXT_PUBLIC_API_URL env var:", process.env.NEXT_PUBLIC_API_URL || "❌ NOT SET!")
         }
       } finally {
         setIsLoading(false)

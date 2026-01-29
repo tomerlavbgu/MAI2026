@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { PayoffMatrix } from "./payoff-matrix"
 import { ProbabilitySlider } from "./probability-slider"
 import { PerturbedMatrix } from "./perturbed-matrix"
@@ -137,6 +137,14 @@ export function GameTheorySolver() {
   const [isLoading, setIsLoading] = useState(false)
   const [forceImmediate, setForceImmediate] = useState(false)
 
+  // Ref to store preset data for immediate API call (avoids state closure issues)
+  const presetDataRef = useRef<{
+    matrix1: number[][]
+    matrix2: number[][]
+    player1Prob: number
+    player2Prob: number
+  } | null>(null)
+
   // Debounce inputs by 500ms
   const debouncedMatrix = useDebounce(matrix, 500)
   const debouncedMatrix2 = useDebounce(matrix2, 500)
@@ -145,18 +153,25 @@ export function GameTheorySolver() {
 
   // Immediate API call for preset changes (bypass debounce)
   useEffect(() => {
-    if (forceImmediate) {
+    if (forceImmediate && presetDataRef.current) {
       const controller = new AbortController()
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
       const solveProblem = async () => {
-        setIsLoading(true)
+        // Use data from ref to avoid state closure issues
+        const { matrix1, matrix2, player1Prob, player2Prob } = presetDataRef.current!
+
+        console.log("🚀 Immediate API call triggered with preset data")
+        console.log("Matrix 1:", matrix1)
+        console.log("Matrix 2:", matrix2)
+        console.log("Constraints:", player1Prob, player2Prob)
+
         try {
           const response = await fetch(`${apiUrl}/solve`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              payoff_matrix_1: matrix,  // Use non-debounced values!
+              payoff_matrix_1: matrix1,  // Use ref data, not state!
               payoff_matrix_2: matrix2,
               p1_constraints: [{
                 action_index: 0,
@@ -177,6 +192,7 @@ export function GameTheorySolver() {
             const data: SolverResult = await response.json()
             setSolverResult(data)
             console.log("✅ Immediate solver API call success (preset change)!")
+            console.log("Modified NE:", data.modified_equilibrium)
           } else {
             let errorDetails = `Status: ${response.status} ${response.statusText}`
             try {
@@ -194,13 +210,14 @@ export function GameTheorySolver() {
         } finally {
           setIsLoading(false)
           setForceImmediate(false)  // Reset flag
+          presetDataRef.current = null  // Clear ref
         }
       }
 
       solveProblem()
       return () => controller.abort()
     }
-  }, [forceImmediate, matrix, matrix2, player1Prob, player2Prob])
+  }, [forceImmediate])
 
   // Call the solver API whenever debounced inputs change
   useEffect(() => {
@@ -275,6 +292,12 @@ export function GameTheorySolver() {
     }
   }, [debouncedMatrix, debouncedMatrix2, debouncedPlayer1Prob, debouncedPlayer2Prob, forceImmediate])
 
+  // Load first preset on mount
+  useEffect(() => {
+    console.log("🎬 Initial load - loading first preset")
+    loadPreset(GAME_PRESETS[0].id)
+  }, []) // Empty dependency array - runs once on mount
+
   // Compute perturbed matrices from solver results
   const perturbedMatrix1 = solverResult
     ? solverResult.modified_payoff_1.map((row, i) =>
@@ -311,13 +334,28 @@ export function GameTheorySolver() {
     if (preset) {
       // Clear solver result to force graph to use new matrices
       setSolverResult(null)
+      setIsLoading(true) // Show loading immediately
 
-      // Deep copy to ensure proper state update
-      setMatrix(preset.matrix1.map(row => [...row]))
-      setMatrix2(preset.matrix2.map(row => [...row]))
+      // Deep copy matrices
+      const newMatrix1 = preset.matrix1.map(row => [...row])
+      const newMatrix2 = preset.matrix2.map(row => [...row])
+
+      // Store preset data in ref for immediate API call (avoids state closure issues)
+      presetDataRef.current = {
+        matrix1: newMatrix1,
+        matrix2: newMatrix2,
+        player1Prob: 50, // Reset to default
+        player2Prob: 50, // Reset to default
+      }
+
+      // Update all state
+      setMatrix(newMatrix1)
+      setMatrix2(newMatrix2)
       setRows(preset.rows)
       setCols(preset.cols)
       setSelectedPreset(presetId)
+      setPlayer1Prob(50) // Reset slider to default
+      setPlayer2Prob(50) // Reset slider to default
       setForceImmediate(true) // Trigger immediate API call
     }
   }

@@ -135,6 +135,7 @@ export function GameTheorySolver() {
   const [selectedPreset, setSelectedPreset] = useState(GAME_PRESETS[0].id)
   const [solverResult, setSolverResult] = useState<SolverResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [forceImmediate, setForceImmediate] = useState(false)
 
   // Debounce inputs by 500ms
   const debouncedMatrix = useDebounce(matrix, 500)
@@ -142,8 +143,68 @@ export function GameTheorySolver() {
   const debouncedPlayer1Prob = useDebounce(player1Prob, 500)
   const debouncedPlayer2Prob = useDebounce(player2Prob, 500)
 
+  // Immediate API call for preset changes (bypass debounce)
+  useEffect(() => {
+    if (forceImmediate) {
+      const controller = new AbortController()
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
+      const solveProblem = async () => {
+        setIsLoading(true)
+        try {
+          const response = await fetch(`${apiUrl}/solve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              payoff_matrix_1: matrix,  // Use non-debounced values!
+              payoff_matrix_2: matrix2,
+              p1_constraints: [{
+                action_index: 0,
+                min_prob: player1Prob / 100,
+                max_prob: player1Prob / 100,
+              }],
+              p2_constraints: [{
+                action_index: 0,
+                min_prob: player2Prob / 100,
+                max_prob: player2Prob / 100,
+              }],
+              max_iterations: 500,
+            }),
+            signal: controller.signal,
+          })
+
+          if (response.ok) {
+            const data: SolverResult = await response.json()
+            setSolverResult(data)
+            console.log("✅ Immediate solver API call success (preset change)!")
+          } else {
+            let errorDetails = `Status: ${response.status} ${response.statusText}`
+            try {
+              const errorBody = await response.text()
+              errorDetails += `\nResponse: ${errorBody.substring(0, 500)}`
+            } catch (e) {
+              // Ignore if can't read response
+            }
+            console.error("❌ Immediate solver API error:", errorDetails)
+          }
+        } catch (error) {
+          if (error instanceof Error && error.name !== 'AbortError') {
+            console.error("❌ Immediate network error:", error.message)
+          }
+        } finally {
+          setIsLoading(false)
+          setForceImmediate(false)  // Reset flag
+        }
+      }
+
+      solveProblem()
+      return () => controller.abort()
+    }
+  }, [forceImmediate, matrix, matrix2, player1Prob, player2Prob])
+
   // Call the solver API whenever debounced inputs change
   useEffect(() => {
+    if (!forceImmediate) {  // Only run if not forcing immediate
     const controller = new AbortController()
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -208,10 +269,11 @@ export function GameTheorySolver() {
       }
     }
 
-    solveProblem()
+      solveProblem()
 
-    return () => controller.abort()
-  }, [debouncedMatrix, debouncedMatrix2, debouncedPlayer1Prob, debouncedPlayer2Prob])
+      return () => controller.abort()
+    }
+  }, [debouncedMatrix, debouncedMatrix2, debouncedPlayer1Prob, debouncedPlayer2Prob, forceImmediate])
 
   // Compute perturbed matrices from solver results
   const perturbedMatrix1 = solverResult
@@ -247,12 +309,16 @@ export function GameTheorySolver() {
   const loadPreset = (presetId: string) => {
     const preset = GAME_PRESETS.find((p) => p.id === presetId)
     if (preset) {
+      // Clear solver result to force graph to use new matrices
+      setSolverResult(null)
+
       // Deep copy to ensure proper state update
       setMatrix(preset.matrix1.map(row => [...row]))
       setMatrix2(preset.matrix2.map(row => [...row]))
       setRows(preset.rows)
       setCols(preset.cols)
       setSelectedPreset(presetId)
+      setForceImmediate(true) // Trigger immediate API call
     }
   }
 

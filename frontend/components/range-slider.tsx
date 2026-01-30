@@ -1,6 +1,7 @@
 "use client"
 
 import { Slider } from "@/components/ui/slider"
+import { useState, useEffect } from "react"
 
 interface RangeSliderProps {
   minValue: number
@@ -18,43 +19,45 @@ export function RangeSlider({
   label = "Probability Constraint Range (0-100%)"
 }: RangeSliderProps) {
 
-  const handleRangeCommit = (values: number[]) => {
+  // Local state for immediate visual feedback
+  const [localMin, setLocalMin] = useState(minValue)
+  const [localMax, setLocalMax] = useState(maxValue)
+
+  // Sync local state when parent props change (e.g., preset load)
+  useEffect(() => {
+    setLocalMin(minValue)
+    setLocalMax(maxValue)
+  }, [minValue, maxValue])
+
+  const handleRangeChange = (values: number[]) => {
     let newMin = values[0]
     let newMax = values[1]
     const minGap = 1
 
-    // Simple clamping - no need to detect which thumb moved
-    // Just enforce the gap on final committed value
-
-    // Ensure MIN doesn't exceed MAX - gap
-    if (newMin > newMax - minGap) {
-      newMin = newMax - minGap
-    }
-
-    // Ensure MAX doesn't go below MIN + gap
-    if (newMax < newMin + minGap) {
-      newMax = newMin + minGap
-    }
-
-    // Clamp to 0-100 bounds
-    newMin = Math.max(0, newMin)
-    newMax = Math.min(100, newMax)
-
-    // Final safety: if still invalid after clamping, prioritize MAX
+    // Enforce gap constraint immediately
     if (newMax - newMin < minGap) {
-      if (newMax === 100) {
-        // MAX is at boundary, adjust MIN
-        newMin = 100 - minGap
-      } else if (newMin === 0) {
-        // MIN is at boundary, adjust MAX
-        newMax = minGap
+      // If gap violated, clamp based on which value changed more
+      const minDiff = Math.abs(newMin - localMin)
+      const maxDiff = Math.abs(newMax - localMax)
+
+      if (minDiff > maxDiff) {
+        // MIN moved more, adjust it
+        newMin = Math.max(0, Math.min(newMin, newMax - minGap))
       } else {
-        // Neither at boundary, adjust MIN
-        newMin = newMax - minGap
+        // MAX moved more, adjust it
+        newMax = Math.min(100, Math.max(newMax, newMin + minGap))
       }
     }
 
-    // Always update both (no conditionals)
+    // Clamp to bounds
+    newMin = Math.max(0, Math.min(newMin, 100 - minGap))
+    newMax = Math.max(minGap, Math.min(newMax, 100))
+
+    // Update local state immediately for visual feedback
+    setLocalMin(newMin)
+    setLocalMax(newMax)
+
+    // Update parent
     onMinChange(newMin)
     onMaxChange(newMax)
   }
@@ -66,16 +69,16 @@ export function RangeSlider({
         <span className="text-gray-400 text-xs sm:text-sm">0</span>
         <div className="flex-1">
           <Slider
-            value={[minValue, maxValue]}
-            onValueCommit={handleRangeCommit}
+            value={[localMin, localMax]}
+            onValueChange={handleRangeChange}
             min={0}
             max={100}
             step={1}
             className="flex-1"
           />
           <div className="flex justify-between mt-1 px-1">
-            <span className="text-gray-500 text-xs">MIN: {minValue}%</span>
-            <span className="text-gray-500 text-xs">MAX: {maxValue}%</span>
+            <span className="text-gray-500 text-xs">MIN: {localMin}%</span>
+            <span className="text-gray-500 text-xs">MAX: {localMax}%</span>
           </div>
         </div>
         <span className="text-gray-400 text-xs sm:text-sm w-8 sm:w-10">100</span>

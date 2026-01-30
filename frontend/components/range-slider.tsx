@@ -18,45 +18,45 @@ export function RangeSlider({
   label = "Probability Constraint Range (0-100%)"
 }: RangeSliderProps) {
 
-  const handleRangeChange = (values: number[]) => {
+  const handleRangeCommit = (values: number[]) => {
     let newMin = values[0]
     let newMax = values[1]
     const minGap = 1
 
-    // Detect which thumb moved
-    const minChanged = newMin !== minValue
-    const maxChanged = newMax !== maxValue
+    // Simple clamping - no need to detect which thumb moved
+    // Just enforce the gap on final committed value
 
-    // Clamp to enforce gap
-    if (minChanged && !maxChanged) {
-      // MIN thumb is moving - ensure it doesn't get too close to MAX
-      newMin = Math.min(newMin, maxValue - minGap)
-    } else if (maxChanged && !minChanged) {
-      // MAX thumb is moving - ensure it doesn't get too close to MIN
-      newMax = Math.max(newMax, minValue + minGap)
-    } else if (minChanged && maxChanged) {
-      // Both changed (edge case) - maintain gap, prioritize MAX
-      if (newMax - newMin < minGap) {
+    // Ensure MIN doesn't exceed MAX - gap
+    if (newMin > newMax - minGap) {
+      newMin = newMax - minGap
+    }
+
+    // Ensure MAX doesn't go below MIN + gap
+    if (newMax < newMin + minGap) {
+      newMax = newMin + minGap
+    }
+
+    // Clamp to 0-100 bounds
+    newMin = Math.max(0, newMin)
+    newMax = Math.min(100, newMax)
+
+    // Final safety: if still invalid after clamping, prioritize MAX
+    if (newMax - newMin < minGap) {
+      if (newMax === 100) {
+        // MAX is at boundary, adjust MIN
+        newMin = 100 - minGap
+      } else if (newMin === 0) {
+        // MIN is at boundary, adjust MAX
+        newMax = minGap
+      } else {
+        // Neither at boundary, adjust MIN
         newMin = newMax - minGap
       }
     }
 
-    // Clamp to 0-100 range
-    newMin = Math.max(0, Math.min(newMin, 100 - minGap))
-    newMax = Math.max(minGap, Math.min(newMax, 100))
-
-    // Final safety: if gap still violated after clamping, adjust MIN
-    if (newMax - newMin < minGap) {
-      newMin = Math.max(0, newMax - minGap)
-    }
-
-    // Only update if values actually changed (avoid infinite loops)
-    if (newMin !== minValue) {
-      onMinChange(newMin)
-    }
-    if (newMax !== maxValue) {
-      onMaxChange(newMax)
-    }
+    // Always update both (no conditionals)
+    onMinChange(newMin)
+    onMaxChange(newMax)
   }
 
   return (
@@ -67,7 +67,7 @@ export function RangeSlider({
         <div className="flex-1">
           <Slider
             value={[minValue, maxValue]}
-            onValueChange={handleRangeChange}
+            onValueCommit={handleRangeCommit}
             min={0}
             max={100}
             step={1}

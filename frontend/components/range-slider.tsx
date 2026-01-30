@@ -19,9 +19,44 @@ export function RangeSlider({
 }: RangeSliderProps) {
 
   const handleRangeChange = (values: number[]) => {
-    // values[0] is MIN, values[1] is MAX
-    onMinChange(values[0])
-    onMaxChange(values[1])
+    let newMin = values[0]
+    let newMax = values[1]
+    const minGap = 1
+
+    // Detect which thumb moved
+    const minChanged = newMin !== minValue
+    const maxChanged = newMax !== maxValue
+
+    // Clamp to enforce gap
+    if (minChanged && !maxChanged) {
+      // MIN thumb is moving - ensure it doesn't get too close to MAX
+      newMin = Math.min(newMin, maxValue - minGap)
+    } else if (maxChanged && !minChanged) {
+      // MAX thumb is moving - ensure it doesn't get too close to MIN
+      newMax = Math.max(newMax, minValue + minGap)
+    } else if (minChanged && maxChanged) {
+      // Both changed (edge case) - maintain gap, prioritize MAX
+      if (newMax - newMin < minGap) {
+        newMin = newMax - minGap
+      }
+    }
+
+    // Clamp to 0-100 range
+    newMin = Math.max(0, Math.min(newMin, 100 - minGap))
+    newMax = Math.max(minGap, Math.min(newMax, 100))
+
+    // Final safety: if gap still violated after clamping, adjust MIN
+    if (newMax - newMin < minGap) {
+      newMin = Math.max(0, newMax - minGap)
+    }
+
+    // Only update if values actually changed (avoid infinite loops)
+    if (newMin !== minValue) {
+      onMinChange(newMin)
+    }
+    if (newMax !== maxValue) {
+      onMaxChange(newMax)
+    }
   }
 
   return (

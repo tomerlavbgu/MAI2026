@@ -47,3 +47,11 @@ coverage/
 *.tmp
 tmp/
 temp/
+.claude
+
+
+docs/
+backups/
+
+
+

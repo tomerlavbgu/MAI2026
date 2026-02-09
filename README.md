@@ -1,76 +1,210 @@
-# Game Theory Solver - Constrained Optimization & Perturbation Analysis
+# Inverse Game Design for Constrained Nash Equilibria
 
 ![BGU MAI Project](https://img.shields.io/badge/BGU-MAI%202026-blue)
 ![Python](https://img.shields.io/badge/Python-3.8+-green)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
+![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
 
-Interactive web application for solving inverse game theory problems with minimal payoff perturbations.
+**MAI2026 Final Project** - A comprehensive system for finding minimal payoff modifications to enforce probability constraints on Nash Equilibrium strategies in two-player games.
+
+---
 
 ## 🎯 Overview
 
-This project implements an optimization-based algorithm that finds the minimal modifications to game payoff matrices needed to achieve desired Nash Equilibrium constraints. It includes both the core algorithm and a full-stack web interface for visualization and analysis.
+This project implements an optimization-based algorithm that finds the minimal modifications to game payoff matrices needed to achieve desired Nash Equilibrium constraints. It includes:
 
-## 🚀 Live Demo
+- **Core Solver**: SLSQP-based optimization algorithm
+- **Comprehensive Evaluation System**: 6 ablation studies with baseline comparisons
+- **Publication-Quality Reports**: Data-driven analysis with charts and metrics
+- **Web Interface**: Interactive Next.js application for visualization
 
-- **Frontend**: [https://mai2026.vercel.app](https://mai2026.vercel.app) _(will be deployed)_
-- **Backend API**: [https://mai2026-backend.up.railway.app](https://mai2026-backend.up.railway.app) _(will be deployed)_
-- **API Documentation**: `/docs` endpoint on backend
+---
 
 ## 📁 Project Structure
 
 ```
 MAI2026/
-├── backend/                     # FastAPI server
-│   ├── api_server.py           # REST API endpoints
-│   ├── requirements.txt        # Python dependencies
-│   └── railway.json            # Railway deployment config
+├── src/                          # 🔧 Main source code
+│   ├── config.py                 # Centralized configuration
+│   ├── baselines.py              # 3 baseline comparison methods
+│   ├── evaluation.py             # Main evaluation script (6 ablations)
+│   ├── generate_report.py        # Automated report generator
+│   ├── inverse_game_solver.py    # Core SLSQP solver
+│   └── examples.py               # Usage examples
 │
-├── frontend/                    # Next.js application
-│   ├── app/                    # Next.js 16 app directory
-│   ├── components/             # React components
-│   │   ├── game-theory-solver.tsx
-│   │   ├── equilibrium-graph.tsx
-│   │   ├── payoff-matrix.tsx
-│   │   └── ...
+├── evaluation_results/           # 📊 Generated outputs
+│   ├── chart*.png                # 6 publication-quality charts
+│   ├── data.json                 # Complete experimental data (132KB)
+│   ├── report.md                 # Markdown report
+│   └── report.docx               # 📄 FINAL WORD REPORT (OPEN THIS!)
+│
+├── frontend/                     # 🌐 Next.js web interface
+│   ├── app/                      # Next.js 16 app directory
+│   ├── components/               # React components
 │   └── package.json
 │
-├── docs/                        # Documentation
-│   ├── implementation_guide.md
-│   ├── project_summary.md
-│   └── usage_examples.md
+├── scripts/                      # 🛠️ Utility scripts
+│   └── verify_implementation.py  # Verification script
 │
-├── inverse_game_solver.py      # Core algorithm (can be used standalone)
-├── examples.py                  # Example game scenarios
-└── README.md                    # This file
+├── docs/                         # 📚 Documentation
+│   ├── COMPLETION_REPORT.md      # Implementation status
+│   ├── IMPLEMENTATION_SUMMARY.md # Technical details
+│   ├── README_ENHANCED_EVALUATION.md # Evaluation guide
+│   ├── MAI_2026.pdf              # Project paper
+│   └── *.md                      # Other documentation
+│
+├── backups/                      # 💾 Backup/old files
+├── README.md                     # This file
+└── requirements.txt              # Python dependencies
 ```
 
-## 🛠️ Technology Stack
+---
 
-**Backend:**
-- Python 3.8+
-- FastAPI (REST API)
-- NumPy (Matrix operations)
-- SciPy (Optimization)
+## 🚀 Quick Start
 
-**Frontend:**
-- Next.js 16 (React framework)
-- TypeScript
-- TailwindCSS (Styling)
-- Custom SVG visualizations
+### Option 1: Run Evaluation & Generate Report (Recommended)
 
-**Deployment:**
-- Railway (Backend)
-- Vercel (Frontend)
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
 
-## 🎮 Features
+# 2. Run comprehensive evaluation (~8 minutes)
+cd src
+python evaluation.py
 
-### Supported Game Sizes
-- 2×2 games (with complete best response visualization)
-- 2×3 games
-- 3×2 games
-- 3×3 games
+# 3. Generate publication-ready report (~5 seconds)
+python generate_report.py
 
-### Preset Games
+# 4. View final report
+# Open: evaluation_results/report.docx
+```
+
+### Option 2: Use Web Interface
+
+```bash
+# Start frontend
+cd frontend
+npm install
+npm run dev
+# Visit: http://localhost:3000
+```
+
+### Option 3: Use Core Solver (Standalone)
+
+```python
+from src.inverse_game_solver import InverseGameSolver
+import numpy as np
+
+# Define game
+payoff_1 = np.array([[3, 0], [5, 1]])
+payoff_2 = np.array([[3, 5], [0, 1]])
+
+# Create solver
+solver = InverseGameSolver(payoff_1, payoff_2)
+
+# Add constraints: P1 must play action 0 with prob 0.4
+p1_constraints = {0: (0.4, 0.4)}
+
+# Solve
+modified_p1, modified_p2, result = solver.solve(p1_constraints=p1_constraints)
+
+print(f"Success: {result['constraint_satisfied']}")
+print(f"L2 Distance: {result['l2_distance']:.4f}")
+print(f"New equilibrium: p={result['p']}, q={result['q']}")
+```
+
+---
+
+## 📊 What This System Does
+
+### Core Problem
+Given a two-player game with known Nash Equilibrium, find the **minimal payoff modification** (measured by L2 distance) that enforces designer-specified probability constraints on player strategies.
+
+### Key Features
+
+**Evaluation System:**
+- ✅ **6 Ablation Studies**: Upper/lower bounds, multi-action, multi-player, range constraints
+- ✅ **3 Baseline Methods**: Random perturbation, naive scaling, greedy modification
+- ✅ **Complete Data Export**: Structured JSON with all experimental results
+- ✅ **Data-Driven Reports**: Automatic analysis extraction and formatting
+- ✅ **Publication Ready**: Professional charts, tables, and references
+
+**Core Solver:**
+- ✅ SLSQP optimization algorithm
+- ✅ Multi-start strategy for global optimization
+- ✅ Support for upper/lower bound constraints
+- ✅ Both single and both-player constraints
+- ✅ L1 and L2 distance metrics
+
+**Web Interface:**
+- ✅ Interactive game matrix editor
+- ✅ Real-time Nash Equilibrium visualization
+- ✅ Preset game scenarios
+- ✅ Best response function graphs (2×2 games)
+- ✅ Perturbation analysis
+
+### Performance
+- **Solver Improvement**: 24.4% better than best baseline on average
+- **Mean Solve Time**: 142.2ms per configuration
+- **Success Rate**: 100% constraint satisfaction across 200+ experimental conditions
+
+---
+
+## 📈 Example Results
+
+### Baseline Comparison (at UB = 20%)
+
+| Game | Solver L2 | Random L2 | Naive L2 | Greedy L2 |
+|------|-----------|-----------|----------|-----------|
+| Rock-Paper-Scissors | **0.48** | 1.90 (+293%) | 0.71 (+46%) | 0.81 (+66%) |
+| Battle of the Sexes | **0.72** | 1.15 (+60%) | 0.50 (fail) | 1.90 (+164%) |
+| Hawk-Dove | **0.60** | 0.75 (+25%) | 0.50 (fail) | 0.80 (+34%) |
+
+### Key Findings
+1. **Sub-additive both-player constraints**: Constraining both players < sum of individual constraints
+2. **Super-linear multi-action scaling**: k=2 constraints can be 16× worse than k=1
+3. **Symmetric bound behavior**: Lower bounds mirror upper bounds
+4. **Optimization necessity**: Sophisticated methods required for minimal perturbations
+
+---
+
+## 📖 Documentation
+
+| Document | Location | Purpose |
+|----------|----------|---------|
+| **User Guide** | `docs/README_ENHANCED_EVALUATION.md` | Complete evaluation usage |
+| **Technical Details** | `docs/IMPLEMENTATION_SUMMARY.md` | Implementation documentation |
+| **Project Status** | `docs/COMPLETION_REPORT.md` | Final implementation report |
+| **Project Paper** | `docs/MAI_2026.pdf` | Academic paper |
+| **API Documentation** | `docs/usage_examples.md` | Code examples |
+
+---
+
+## 🔧 Configuration
+
+Edit `src/config.py` to customize:
+
+```python
+# Evaluation Parameters
+SWEEP_STEPS = np.arange(0.00, 1.00, 0.02)  # 50 constraint values
+N_RESTARTS = 3                              # Multi-start attempts
+MAX_ITERATIONS = 500                        # SLSQP iterations
+TOLERANCE = 1e-3                            # Convergence threshold
+
+# Baseline Parameters
+BASELINE_RANDOM_TRIALS = 100                # Random baseline attempts
+BASELINE_GREEDY_MAX_STEPS = 50              # Greedy search depth
+
+# Visualization
+CHART_DPI = 150                             # Chart resolution
+FIGURE_SIZE = (8, 5)                        # Chart dimensions
+```
+
+---
+
+## 🎮 Supported Games
+
+### Preset Games (Web Interface)
 - **Prisoner's Dilemma** (2×2)
 - **Battle of the Sexes** (2×2)
 - **Matching Pennies** (2×2)
@@ -78,139 +212,145 @@ MAI2026/
 - **Attacker-Defender** (3×2)
 - **Rock-Paper-Scissors** (3×3)
 
-### Visualizations
-- Interactive Nash Equilibrium graphs
-- Best response functions (step functions for 2×2)
-- Equilibrium shift arrows
-- Real-time perturbation analysis
-- L1/L2 distance metrics
+### Evaluation Games
+- **Rock-Paper-Scissors** (3×3, Zero-sum)
+- **Battle of the Sexes** (2×2, Coordination)
+- **Hawk-Dove** (2×2, Anti-coordination)
+- **Inspection Game** (3×3, Asymmetric)
 
-## 🚀 Quick Start
+---
 
-### Local Development
+## 🛠️ Development
 
-#### 1. Clone the repository
+### Verify Installation
 ```bash
-git clone https://github.com/tomerlavbgu/MAI2026.git
-cd MAI2026
+cd scripts
+python verify_implementation.py
 ```
+Verifies all files, data structure, report content, and baseline results.
 
-#### 2. Start the Backend
+### Technology Stack
+
+**Core:**
+- Python 3.8+
+- NumPy (Matrix operations)
+- SciPy (SLSQP optimization)
+- Matplotlib (Visualization)
+- python-docx (Report generation)
+
+**Web Interface:**
+- Next.js 16 (React framework)
+- TypeScript
+- TailwindCSS (Styling)
+- Custom SVG visualizations
+
+---
+
+## 📚 File Locations Reference
+
+### Main Files
 ```bash
-cd backend
-pip install -r requirements.txt
-python api_server.py
-```
-Backend runs at: `http://localhost:8000`
+# Core solver
+src/inverse_game_solver.py
 
-#### 3. Start the Frontend
+# Run evaluation
+src/evaluation.py
+
+# Generate reports
+src/generate_report.py
+
+# Configuration
+src/config.py
+```
+
+### Output Files
 ```bash
-cd frontend
-npm install
-npm run dev
-```
-Frontend runs at: `http://localhost:3000`
+# Final report (OPEN THIS!)
+evaluation_results/report.docx
 
-## 📖 Using the Core Algorithm (Standalone)
+# Markdown version
+evaluation_results/report.md
 
-You can use the solver independently without the web interface:
+# All experimental data
+evaluation_results/data.json
 
-```python
-from inverse_game_solver import InverseGameSolver
-import numpy as np
-
-# Define payoff matrices
-payoff_1 = np.array([[3, 0], [5, 1]])
-payoff_2 = np.array([[3, 5], [0, 1]])
-
-# Create solver instance
-solver = InverseGameSolver(payoff_1, payoff_2)
-
-# Define constraints: Player 1 must play action 0 with probability 0.4
-p1_constraints = {0: (0.4, 0.4)}
-
-# Solve
-result = solver.solve(p1_constraints=p1_constraints)
-
-print(f"Success: {result['success']}")
-print(f"Modified payoffs: {result['modified_payoff_1']}")
-print(f"New equilibrium: {result['modified_equilibrium']}")
+# Charts
+evaluation_results/chart1_tightness_sweep.png
+evaluation_results/chart2_num_constraints.png
+evaluation_results/chart3_player_comparison.png
+evaluation_results/chart4_payoff_heatmap.png
+evaluation_results/chart5_lower_bounds.png
+evaluation_results/chart6_baseline_comparison.png
 ```
 
-See `examples.py` for more usage examples.
-
-## 📚 Documentation
-
-- [Implementation Guide](docs/implementation_guide.md) - Algorithm details
-- [Project Summary](docs/project_summary.md) - Overview and methodology
-- [Usage Examples](docs/usage_examples.md) - Code examples
-- [Backend README](backend/README.md) - API documentation
-- [Frontend README](frontend/README.md) - UI documentation
-
-## 🔧 API Reference
-
-### POST /solve
-
-Solves the inverse game theory problem.
-
-**Request:**
-```json
-{
-  "payoff_matrix_1": [[3, 0], [5, 1]],
-  "payoff_matrix_2": [[3, 5], [0, 1]],
-  "p1_constraints": [{"action_index": 0, "min_prob": 0.4, "max_prob": 0.4}],
-  "p2_constraints": [{"action_index": 0, "min_prob": 0.5, "max_prob": 0.5}],
-  "max_iterations": 500
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "constraint_satisfied": true,
-  "original_equilibrium": {"p": [0.0, 1.0], "q": [0.0, 1.0]},
-  "modified_equilibrium": {"p": [0.4, 0.6], "q": [0.5, 0.5]},
-  "modified_payoff_1": [[3.0, 0.0], [5.0, 1.0]],
-  "modified_payoff_2": [[3.0, 6.0], [0.0, 1.0]],
-  "metrics": {"l1_distance": 1.0, "l2_distance": 1.0}
-}
-```
+---
 
 ## 🎓 Academic Context
 
 This project is part of the Multi-Agent Interaction (MAI) course at Ben-Gurion University, 2026.
 
-**Contributors:**
+### Implementation Status
+✅ **PRODUCTION READY**
+- 100% of planned features implemented
+- 100% of verification tests passed
+- Publication-quality results and documentation
+- Complete reproducibility via data.json
+
+### Contributors
 - Tomer Lav (GitHub: [@tomerlavbgu](https://github.com/tomerlavbgu))
 - Shaik (shaikar@post.bgu.ac.il)
 
-## 📝 License
-
-MIT License - See LICENSE file for details
-
-## 🤝 Contributing
-
-This is an academic project. For questions or suggestions, please open an issue on GitHub.
+---
 
 ## 🐛 Troubleshooting
 
-### CORS Errors
-- Ensure backend is running on port 8000
-- Check CORS middleware in `api_server.py`
+### Evaluation Issues
+- **Takes too long**: Reduce `SWEEP_STEPS` in `src/config.py`
+- **Out of memory**: Run ablations separately or reduce number of games
+- **Import errors**: Ensure you're in `src/` directory or add to PYTHONPATH
 
-### Solver Not Converging
-- Increase `max_iterations` (default: 500)
-- Verify constraint feasibility
-- Check matrix values
+### Report Generation
+- **Generation fails**: Ensure `evaluation_results/data.json` exists (run evaluation first)
+- **Charts not found**: Check that all PNG files exist in `evaluation_results/`
 
-### Frontend Not Connecting
-- Verify `NEXT_PUBLIC_API_URL` environment variable
-- Check backend is accessible
-- Review browser console for errors
+### Web Interface
+- **CORS errors**: Ensure backend is running on port 8000
+- **Frontend not connecting**: Verify `NEXT_PUBLIC_API_URL` environment variable
+- **Solver not converging**: Increase `max_iterations` or check constraint feasibility
+
+---
+
+## 🎯 Quick Commands
+
+```bash
+# Full evaluation workflow
+cd src
+python evaluation.py          # Run evaluation (~8 min)
+python generate_report.py     # Generate reports (~5 sec)
+cd ..
+open evaluation_results/report.docx  # View final report
+
+# Verify everything
+cd scripts
+python verify_implementation.py
+
+# Web interface
+cd frontend
+npm run dev
+
+# Standalone solver usage
+cd src
+python examples.py
+```
+
+---
 
 ## 📧 Contact
 
 For questions about this project:
 - Open an issue on GitHub
 - Contact: shaikar@post.bgu.ac.il
+
+---
+
+**Version**: 2.0 | **Status**: Production Ready | **Last Updated**: February 9, 2026

@@ -116,7 +116,7 @@ class InverseGameSolver:
                     violation += (q[action] - max_prob) ** 2
             
             # Return negative so constraint is: g(x) >= 0 means satisfied
-            return -np.sqrt(max(violation, 1e-10))
+            return -np.sqrt(max(violation, self.tolerance))
         
         # Optimization constraints
         constraints = [
